@@ -1,0 +1,52 @@
+var express = require('express');
+var router = express.Router();
+var bodyParser = require('body-parser');
+var MongoClient = require('mongodb').MongoClient;
+var url = "mongodb://localhost:27017/";
+
+const fileUpload = require('express-fileupload');
+router.use(fileUpload());
+
+router.use(bodyParser.json());
+router.use(bodyParser.urlencoded({
+  extended: true
+}));
+
+router.get('/contact', function(req, res){
+  MongoClient.connect(url, function(err, db) {
+	  dbo = db.db("contactdb1");
+	  cond={name:'Vipin Rajoria'};
+ 	 dbo.collection("customers").find(cond,{ _id: 0 }).toArray(function(err, result) {
+    if (err) throw err;
+    console.log(result);
+    db.close();
+  });
+});
+ res.render('./contact');
+});
+
+router.post('/contact', function(req, res){
+	console.log("I am in contact post page"+JSON.stringify(req.body));
+	/****************************** Upload Files *************************/
+	let samplefile = req.files.file_name;
+	let filename="upload_"+Date.now()+"_"+samplefile.name;
+  
+	samplefile.mv('./public/uploads/'+filename, function(err) {
+    if (err)
+      return res.status(500).send(err);
+  });
+
+/*********************Insert Recordsss*********************************/
+	 MongoClient.connect(url, function(err, db) {
+	  Object.assign(req.body, {'fileurl': './public/uploads/'+filename});
+	  var dbo = db.db("contactdb1");
+	  dbo.collection("customers").insertOne(req.body, function(err, res) {
+		if (err) throw err;
+		console.log("1 document inserted");
+		db.close();
+	  });   
+	});
+	res.redirect('./contact');
+});
+
+module.exports = router;
